@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Web Serial API - SIM7100E Monitor</title>
+  <style>
+    /* CSS cơ bản */
+    body {
+      background-color: #f8f9fa;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    h1 {
+      color: #343a40;
+    }
+    .btn {
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      cursor: pointer;
+      border-radius: 5px;
+      margin-right: 10px;
+    }
+    .btn:hover {
+      background-color: #0056b3;
+    }
+    input[type="text"] {
+      padding: 10px;
+      width: 300px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    #output {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #e9ecef;
+      border-radius: 5px;
+      height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>Web Serial API - SIM7100E Monitor</h1>
+  <button class="btn" id="connect">Kết Nối Cổng COM</button>
+  <div style="margin-top:20px;">
+    <input type="text" id="command" placeholder="Nhập lệnh AT">
+    <button class="btn" id="send">Gửi Lệnh</button>
+  </div>
+  <div id="output"></div>
+
+  <script>
+    let port;
+    let reader;
+    let writer;
+
+    // Kết nối cổng COM khi nhấn nút "Kết Nối Cổng COM"
+    document.getElementById('connect').addEventListener('click', async () => {
+      try {
+        // Yêu cầu người dùng chọn cổng COM
+        port = await navigator.serial.requestPort();
+        // Mở cổng với tốc độ baud 115200 (điều chỉnh nếu cần)
+        await port.open({ baudRate: 115200 });
+        document.getElementById('output').textContent += 'Đã kết nối cổng COM.\n';
+        
+        // Thiết lập reader để nhận dữ liệu từ cổng
+        reader = port.readable.getReader();
+        readLoop();
+
+        // Thiết lập writer để gửi dữ liệu
+        writer = port.writable.getWriter();
+      } catch (error) {
+        document.getElementById('output').textContent += 'Lỗi kết nối: ' + error + '\n';
+      }
+    });
+
+    // Hàm liên tục đọc dữ liệu từ cổng COM
+    async function readLoop() {
+      const textDecoder = new TextDecoder();
+      while (true) {
+        try {
+          const { value, done } = await reader.read();
+          if (done) {
+            // Đã hoàn thành đọc, giải phóng reader
+            reader.releaseLock();
+            break;
+          }
+          if (value) {
+            let receivedText = textDecoder.decode(value);
+            document.getElementById('output').textContent += receivedText;
+          }
+        } catch (error) {
+          document.getElementById('output').textContent += 'Lỗi đọc dữ liệu: ' + error + '\n';
+          break;
+        }
+      }
+    }
+
+    // Gửi lệnh AT khi nhấn nút "Gửi Lệnh"
+    document.getElementById('send').addEventListener('click', async () => {
+      let command = document.getElementById('command').value;
+      if (command.trim() === '') {
+        document.getElementById('output').textContent += 'Vui lòng nhập lệnh AT.\n';
+        return;
+      }
+      try {
+        // Thêm ký tự kết thúc lệnh nếu cần (ví dụ: "\r\n")
+        command = command + '\r\n';
+        const data = new TextEncoder().encode(command);
+        await writer.write(data);
+        document.getElementById('output').textContent += 'Đã gửi: ' + command;
+      } catch (error) {
+        document.getElementById('output').textContent += 'Lỗi gửi lệnh: ' + error + '\n';
+      }
+    });
+  </script>
+</body>
+</html>

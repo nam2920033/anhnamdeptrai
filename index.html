@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SIM7100E Monitor & Biểu Đồ Chuyên Nghiệp</title>
+  <title>SIM7100E Monitor & Lưu Trữ Dữ Liệu</title>
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Animate.css cho hiệu ứng động -->
+  <!-- Animate.css -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
-    /* Tổng quan */
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    /* Reset & cấu hình cơ bản */
+    * { margin:0; padding:0; box-sizing: border-box; }
     body {
       background: linear-gradient(135deg, #f8f9fa, #e9ecef);
       font-family: 'Roboto', sans-serif;
@@ -34,10 +34,8 @@
       margin: 10px;
       transition: background-color 0.3s ease;
     }
-    .btn:hover {
-      background-color: #2980b9;
-    }
-    input[type="text"] {
+    .btn:hover { background-color: #2980b9; }
+    input[type="text"], select {
       padding: 12px;
       width: 320px;
       border: 1px solid #ccc;
@@ -45,10 +43,7 @@
       margin: 10px;
       transition: border-color 0.3s ease;
     }
-    input[type="text"]:focus {
-      outline: none;
-      border-color: #3498db;
-    }
+    input[type="text"]:focus, select:focus { outline: none; border-color: #3498db; }
     #output {
       margin-top: 20px;
       padding: 15px;
@@ -59,10 +54,7 @@
       white-space: pre-wrap;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
+    .container { max-width: 1200px; margin: 0 auto; }
     .chart-container, .table-container {
       background: #fff;
       padding: 20px;
@@ -70,43 +62,61 @@
       margin: 30px auto;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
+    /* Bảng dữ liệu scrollable */
+    .table-container { max-height: 400px; overflow-y: auto; }
     table {
       width: 100%;
       border-collapse: collapse;
     }
-    table, th, td {
-      border: 1px solid #ddd;
-    }
-    th, td {
-      padding: 12px;
-      text-align: center;
-    }
+    table, th, td { border: 1px solid #ddd; }
+    th, td { padding: 12px; text-align: center; }
     th { background-color: #f7f7f7; }
-    tr.animate-row {
-      animation: fadeIn 0.5s ease-out;
-    }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-row { animation: fadeIn 0.5s ease-out; }
+    /* Style cho khu vực lựa chọn Baud Rate */
+    .baud-select {
+      display: inline-block;
+      margin: 10px;
+    }
+    .baud-select label {
+      margin-right: 8px;
+      font-weight: 500;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1 class="animate__animated animate__fadeInDown">SIM7100E Monitor & Biểu Đồ Chuyên Nghiệp</h1>
+    <h1 class="animate__animated animate__fadeInDown">SIM7100E Monitor & Lưu Trữ Dữ Liệu</h1>
     
     <!-- Giao diện Serial -->
     <div style="text-align: center;" class="animate__animated animate__fadeInUp">
       <button class="btn" id="connect">Kết Nối Cổng COM</button>
       <br>
+      <!-- Dropdown chọn Baud Rate -->
+      <div class="baud-select">
+        <label for="baudRateSelect">Chọn Baud Rate:</label>
+        <select id="baudRateSelect">
+          <option value="9600">9600</option>
+          <option value="19200">19200</option>
+          <option value="38400">38400</option>
+          <option value="57600">57600</option>
+          <option value="115200" selected>115200</option>
+        </select>
+      </div>
+      <br>
       <input type="text" id="command" placeholder="Nhập lệnh AT (thủ công)">
       <button class="btn" id="send">Gửi Lệnh</button>
+      <!-- Nút chuyển chế độ đo 5 giây -->
+      <button class="btn" id="toggleMeasure5s">Bắt đầu đo 5s</button>
     </div>
     <div id="output" class="animate__animated animate__fadeInUp"></div>
     
-    <!-- Biểu đồ -->
+    <!-- Phần biểu đồ -->
     <div class="chart-container animate__animated animate__fadeInUp">
-      <h2>Biểu Đồ Chất Lượng Tín Hiệu (AT+CSQ)</h2>
+      <h2>Biểu Đồ Độ Mạnh Tín Hiệu (RSSI)</h2>
       <canvas id="signalChart"></canvas>
     </div>
     
@@ -118,19 +128,33 @@
           <tr>
             <th>Lần đo</th>
             <th>Thời gian</th>
-            <th>RSSI</th>
-            <th>BER</th>
+            <th>Độ mạnh tín hiệu (RSSI)</th>
+            <th>Đánh giá</th>
           </tr>
         </thead>
         <tbody>
-          <!-- Dữ liệu cập nhật tự động -->
+          <!-- Dữ liệu được cập nhật tự động -->
         </tbody>
       </table>
     </div>
   </div>
   
   <script>
-    // --- Hiệu ứng khi nhấn nút: thêm lớp pulse rồi remove sau khi animation kết thúc ---
+    // Hàm đánh giá chất lượng tín hiệu dựa trên giá trị RSSI
+    function evaluateSignal(rssi) {
+      if (rssi === 99) return "Không xác định";
+      else if (rssi >= 20 && rssi <= 31) return "Rất tốt";
+      else if (rssi >= 15 && rssi < 20) return "Tốt";
+      else if (rssi >= 10 && rssi < 15) return "Trung bình";
+      else if (rssi >= 1 && rssi < 10) return "Yếu";
+      else if (rssi === 0) return "Rất kém";
+      return "N/A";
+    }
+    
+    // Biến cờ để phân biệt lệnh thủ công
+    let isManualCommand = false;
+    
+    // Hiệu ứng "pulse" cho các nút khi nhấn
     document.querySelectorAll('.btn').forEach(btn => {
       btn.addEventListener('click', () => {
         btn.classList.add('animate__animated', 'animate__pulse');
@@ -139,50 +163,40 @@
         }, { once: true });
       });
     });
-
-    // --- Phần Web Serial API và Chart.js ---
-    let port, reader, writer, pollingInterval;
-    let chartDataRSSI = [];
-    let chartDataBER = [];
+    
+    let port, reader, writer;
+    // Biến quản lý chế độ đo 5 giây
+    let isMeasuring5s = false;
+    let measurementInterval5s = null;
+    
+    // Các biến lưu trữ dữ liệu cho biểu đồ và bảng
     let chartLabels = [];
+    let chartDataRSSI = [];
     let measureCount = 0;
+    const maxPoints = 20;  // Số điểm tối đa hiển thị
     
     const ctx = document.getElementById('signalChart').getContext('2d');
-    
     // Tạo gradient cho dataset RSSI
     const gradientRSSI = ctx.createLinearGradient(0, 0, 0, 400);
     gradientRSSI.addColorStop(0, 'rgba(52,152,219,0.5)');
     gradientRSSI.addColorStop(1, 'rgba(52,152,219,0)');
     
-    // Tạo gradient cho dataset BER
-    const gradientBER = ctx.createLinearGradient(0, 0, 0, 400);
-    gradientBER.addColorStop(0, 'rgba(231,76,60,0.5)');
-    gradientBER.addColorStop(1, 'rgba(231,76,60,0)');
-    
+    // Khởi tạo biểu đồ với Chart.js chỉ hiển thị RSSI
     const signalChart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: chartLabels,
         datasets: [
           {
-            label: 'RSSI',
+            label: 'Độ mạnh tín hiệu',
             data: chartDataRSSI,
             backgroundColor: gradientRSSI,
             borderColor: 'rgba(52,152,219,1)',
             borderWidth: 2,
             fill: true,
             tension: 0.4,
-            cubicInterpolationMode: 'monotone'
-          },
-          {
-            label: 'BER',
-            data: chartDataBER,
-            backgroundColor: gradientBER,
-            borderColor: 'rgba(231,76,60,1)',
-            borderWidth: 2,
-            fill: true,
-            tension: 0.4,
-            cubicInterpolationMode: 'monotone'
+            cubicInterpolationMode: 'monotone',
+            spanGaps: true
           }
         ]
       },
@@ -195,7 +209,8 @@
             suggestedMax: 31
           },
           x: {
-            title: { display: true, text: 'Thời gian (Ngày, Tháng, Năm, Giờ:Phút:Giây)' }
+            title: { display: true, text: 'Thời gian (dd/mm HH:MM:SS)' },
+            ticks: { autoSkip: true, maxTicksLimit: 10 }
           }
         },
         animation: {
@@ -205,25 +220,75 @@
       }
     });
     
-    // Hàm cập nhật dữ liệu biểu đồ và bảng
-    function updateData(newRSSI, newBER) {
-      const maxPoints = 10;
-      measureCount++;
+    // Hàm định dạng nhãn thời gian: dd/mm HH:MM:SS (không chứa năm)
+    function getCurrentTimeLabel() {
       const now = new Date();
-      const timeStr = now.toLocaleString();
+      const day = String(now.getDate()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const time = now.toLocaleTimeString('vi-VN', { hour12: false });
+      return `${day}/${month} ${time}`;
+    }
+    
+    // Hàm lưu trữ dữ liệu vào localStorage
+    function saveData() {
+      const dataToSave = {
+        measureCount: measureCount,
+        chartLabels: chartLabels,
+        chartDataRSSI: chartDataRSSI
+      };
+      localStorage.setItem('simData', JSON.stringify(dataToSave));
+    }
+    
+    // Hàm tải dữ liệu từ localStorage khi trang được load
+    function loadData() {
+      const storedData = localStorage.getItem('simData');
+      if (storedData) {
+        const parsed = JSON.parse(storedData);
+        measureCount = parsed.measureCount || 0;
+        chartLabels = parsed.chartLabels || [];
+        chartDataRSSI = parsed.chartDataRSSI || [];
+        // Cập nhật biểu đồ
+        signalChart.data.labels = chartLabels;
+        signalChart.data.datasets[0].data = chartDataRSSI;
+        signalChart.update();
+        // Cập nhật bảng dữ liệu
+        const tbody = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
+        tbody.innerHTML = "";
+        for (let i = 0; i < chartLabels.length; i++) {
+          const row = document.createElement('tr');
+          row.classList.add('animate-row');
+          const cellCount = document.createElement('td');
+          const cellTime = document.createElement('td');
+          const cellRSSI = document.createElement('td');
+          const cellQuality = document.createElement('td');
+          cellCount.textContent = i + 1;
+          cellTime.textContent = chartLabels[i];
+          cellRSSI.textContent = chartDataRSSI[i];
+          cellQuality.textContent = evaluateSignal(chartDataRSSI[i]);
+          row.appendChild(cellCount);
+          row.appendChild(cellTime);
+          row.appendChild(cellRSSI);
+          row.appendChild(cellQuality);
+          tbody.appendChild(row);
+        }
+      }
+    }
+    
+    // Hàm cập nhật biểu đồ và bảng dữ liệu với giá trị RSSI mới
+    function updateChart(newRSSI) {
+      measureCount++;
+      const timeLabel = getCurrentTimeLabel();
+      const quality = evaluateSignal(newRSSI);
       
-      // Cập nhật dữ liệu cho biểu đồ
+      chartLabels.push(timeLabel);
       chartDataRSSI.push(newRSSI);
-      chartDataBER.push(newBER);
-      chartLabels.push(timeStr);
-      if(chartDataRSSI.length > maxPoints) {
-        chartDataRSSI.shift();
-        chartDataBER.shift();
+      if(chartLabels.length > maxPoints) {
         chartLabels.shift();
+        chartDataRSSI.shift();
       }
       signalChart.update();
       
-      // Cập nhật bảng dữ liệu với hiệu ứng động
+      // Cập nhật bảng dữ liệu với hiệu ứng fade-in
       const tbody = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
       const row = document.createElement('tr');
       row.classList.add('animate-row');
@@ -231,32 +296,33 @@
       const cellCount = document.createElement('td');
       const cellTime = document.createElement('td');
       const cellRSSI = document.createElement('td');
-      const cellBER = document.createElement('td');
+      const cellQuality = document.createElement('td');
       
       cellCount.textContent = measureCount;
-      cellTime.textContent = timeStr;
+      cellTime.textContent = timeLabel;
       cellRSSI.textContent = newRSSI;
-      cellBER.textContent = newBER;
+      cellQuality.textContent = quality;
       
       row.appendChild(cellCount);
       row.appendChild(cellTime);
       row.appendChild(cellRSSI);
-      row.appendChild(cellBER);
+      row.appendChild(cellQuality);
       tbody.appendChild(row);
       
-      // Giới hạn số dòng hiển thị
-      if(tbody.rows.length > maxPoints) {
-        tbody.deleteRow(0);
-      }
+      // Lưu dữ liệu vào localStorage mỗi khi có cập nhật
+      saveData();
     }
     
-    // Hàm gửi lệnh AT+CSQ tự động
+    // Hàm gửi lệnh AT+CSQ qua serial
     async function sendATCSQ() {
       if(writer) {
         try {
           const command = "AT+CSQ\r\n";
           await writer.write(new TextEncoder().encode(command));
-          document.getElementById('output').textContent += 'Đã gửi: ' + command;
+          // Nếu không ở chế độ đo 5s và không gửi lệnh thủ công thì hiển thị thông báo
+          if (!isMeasuring5s && !isManualCommand) {
+            document.getElementById('output').textContent += 'Đã gửi: ' + command;
+          }
         } catch (error) {
           document.getElementById('output').textContent += 'Lỗi gửi AT+CSQ: ' + error + '\n';
         }
@@ -267,19 +333,56 @@
     document.getElementById('connect').addEventListener('click', async () => {
       try {
         port = await navigator.serial.requestPort();
-        await port.open({ baudRate: 115200 });
-        document.getElementById('output').textContent += 'Đã kết nối cổng COM.\n';
+        // Lấy giá trị baud rate từ dropdown
+        const baudRate = parseInt(document.getElementById('baudRateSelect').value);
+        await port.open({ baudRate: baudRate });
+        document.getElementById('output').textContent += 'Đã kết nối cổng COM với baud rate ' + baudRate + '.\n';
         reader = port.readable.getReader();
         writer = port.writable.getWriter();
-        // Gửi lệnh AT+CSQ tự động mỗi 1 giây
-        pollingInterval = setInterval(sendATCSQ, 1000);
+        // Sau khi kết nối, tải dữ liệu từ localStorage (nếu có)
+        loadData();
+        // Bắt đầu đọc dữ liệu từ cổng COM
         readLoop();
       } catch (error) {
         document.getElementById('output').textContent += 'Lỗi kết nối: ' + error + '\n';
       }
     });
     
-    // Hàm đọc dữ liệu từ cổng COM
+    // Sự kiện cho nút "Bắt đầu đo 5s" / "Tắt đo 5s"
+    document.getElementById('toggleMeasure5s').addEventListener('click', () => {
+      const btn = document.getElementById('toggleMeasure5s');
+      if (!isMeasuring5s) {
+        // Nếu chưa đo, bắt đầu gửi lệnh AT+CSQ mỗi 5 giây
+        measurementInterval5s = setInterval(sendATCSQ, 5000);
+        btn.textContent = "Tắt đo 5s";
+        isMeasuring5s = true;
+      } else {
+        // Nếu đang đo, dừng quá trình đo
+        clearInterval(measurementInterval5s);
+        measurementInterval5s = null;
+        btn.textContent = "Bắt đầu đo 5s";
+        isMeasuring5s = false;
+      }
+    });
+    
+    // Sự kiện gửi lệnh AT thủ công
+    document.getElementById('send').addEventListener('click', async () => {
+      let command = document.getElementById('command').value;
+      if(command.trim() === '') {
+        document.getElementById('output').textContent += 'Vui lòng nhập lệnh AT.\n';
+        return;
+      }
+      try {
+        isManualCommand = true;
+        command = command + '\r\n';
+        await writer.write(new TextEncoder().encode(command));
+        document.getElementById('output').textContent += 'Đã gửi: ' + command;
+      } catch (error) {
+        document.getElementById('output').textContent += 'Lỗi gửi lệnh: ' + error + '\n';
+      }
+    });
+    
+    // Hàm đọc dữ liệu từ cổng COM liên tục
     async function readLoop() {
       const textDecoder = new TextDecoder();
       while(true) {
@@ -291,39 +394,32 @@
           }
           if(value) {
             let receivedText = textDecoder.decode(value);
-            document.getElementById('output').textContent += receivedText;
-            // Phân tích phản hồi AT+CSQ: định dạng "+CSQ: <rssi>,<ber>"
+            // Nếu đang gửi lệnh thủ công thì hiển thị phản hồi
+            if (isManualCommand) {
+              document.getElementById('output').textContent += receivedText;
+              if (receivedText.includes("OK") || receivedText.includes("ERROR")) {
+                isManualCommand = false;
+              }
+            }
+            // Nếu không ở chế độ đo 5s thì hiển thị phản hồi
+            else if (!isMeasuring5s) {
+              document.getElementById('output').textContent += receivedText;
+            }
+            // Phân tích phản hồi AT+CSQ theo định dạng: "+CSQ: <rssi>,<...>"
             if(receivedText.includes('+CSQ:')) {
-              const match = receivedText.match(/\+CSQ:\s*(\d+),\s*(\d+)/);
+              const match = receivedText.match(/\+CSQ:\s*(\d+)/);
               if(match) {
                 const rssi = parseInt(match[1]);
-                const ber = parseInt(match[2]);
-                updateData(rssi, ber);
+                updateChart(rssi);
               }
             }
           }
-        } catch(error) {
+        } catch (error) {
           document.getElementById('output').textContent += 'Lỗi đọc dữ liệu: ' + error + '\n';
           break;
         }
       }
     }
-    
-    // Gửi lệnh AT thủ công
-    document.getElementById('send').addEventListener('click', async () => {
-      let command = document.getElementById('command').value;
-      if(command.trim() === '') {
-        document.getElementById('output').textContent += 'Vui lòng nhập lệnh AT.\n';
-        return;
-      }
-      try {
-        command = command + '\r\n';
-        await writer.write(new TextEncoder().encode(command));
-        document.getElementById('output').textContent += 'Đã gửi: ' + command;
-      } catch (error) {
-        document.getElementById('output').textContent += 'Lỗi gửi lệnh: ' + error + '\n';
-      }
-    });
   </script>
 </body>
 </html>

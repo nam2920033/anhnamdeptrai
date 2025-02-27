@@ -3,114 +3,322 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Web Serial API - SIM7100E Monitor</title>
+  <title>SIM7100E Monitor & Biểu Đồ Chuyên Nghiệp</title>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Animate.css cho hiệu ứng động -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
-    /* CSS cơ bản */
+    /* Tổng quan */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      background-color: #f8f9fa;
-      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+      font-family: 'Roboto', sans-serif;
       padding: 20px;
+      color: #333;
     }
-    h1 {
-      color: #343a40;
+    h1, h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #2c3e50;
     }
     .btn {
-      background-color: #007bff;
+      background-color: #3498db;
       color: #fff;
       border: none;
-      padding: 10px 20px;
+      padding: 12px 24px;
       cursor: pointer;
-      border-radius: 5px;
-      margin-right: 10px;
+      border-radius: 6px;
+      margin: 10px;
+      transition: background-color 0.3s ease;
     }
     .btn:hover {
-      background-color: #0056b3;
+      background-color: #2980b9;
     }
     input[type="text"] {
-      padding: 10px;
-      width: 300px;
+      padding: 12px;
+      width: 320px;
       border: 1px solid #ccc;
-      border-radius: 5px;
+      border-radius: 6px;
+      margin: 10px;
+      transition: border-color 0.3s ease;
+    }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #3498db;
     }
     #output {
       margin-top: 20px;
-      padding: 10px;
-      background-color: #e9ecef;
-      border-radius: 5px;
-      height: 200px;
+      padding: 15px;
+      background-color: rgba(236, 240, 241, 0.9);
+      border-radius: 6px;
+      height: 150px;
       overflow-y: auto;
       white-space: pre-wrap;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .chart-container, .table-container {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      margin: 30px auto;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    table, th, td {
+      border: 1px solid #ddd;
+    }
+    th, td {
+      padding: 12px;
+      text-align: center;
+    }
+    th { background-color: #f7f7f7; }
+    tr.animate-row {
+      animation: fadeIn 0.5s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
 <body>
-  <h1>Web Serial API - SIM7100E Monitor</h1>
-  <button class="btn" id="connect">Kết Nối Cổng COM</button>
-  <div style="margin-top:20px;">
-    <input type="text" id="command" placeholder="Nhập lệnh AT">
-    <button class="btn" id="send">Gửi Lệnh</button>
+  <div class="container">
+    <h1 class="animate__animated animate__fadeInDown">SIM7100E Monitor & Biểu Đồ Chuyên Nghiệp</h1>
+    
+    <!-- Giao diện Serial -->
+    <div style="text-align: center;" class="animate__animated animate__fadeInUp">
+      <button class="btn" id="connect">Kết Nối Cổng COM</button>
+      <br>
+      <input type="text" id="command" placeholder="Nhập lệnh AT (thủ công)">
+      <button class="btn" id="send">Gửi Lệnh</button>
+    </div>
+    <div id="output" class="animate__animated animate__fadeInUp"></div>
+    
+    <!-- Biểu đồ -->
+    <div class="chart-container animate__animated animate__fadeInUp">
+      <h2>Biểu Đồ Chất Lượng Tín Hiệu (AT+CSQ)</h2>
+      <canvas id="signalChart"></canvas>
+    </div>
+    
+    <!-- Bảng dữ liệu -->
+    <div class="table-container animate__animated animate__fadeInUp">
+      <h2>Bảng Dữ Liệu Lần Đo</h2>
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th>Lần đo</th>
+            <th>Thời gian</th>
+            <th>RSSI</th>
+            <th>BER</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Dữ liệu cập nhật tự động -->
+        </tbody>
+      </table>
+    </div>
   </div>
-  <div id="output"></div>
-
+  
   <script>
-    let port;
-    let reader;
-    let writer;
+    // --- Hiệu ứng khi nhấn nút: thêm lớp pulse rồi remove sau khi animation kết thúc ---
+    document.querySelectorAll('.btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.classList.add('animate__animated', 'animate__pulse');
+        btn.addEventListener('animationend', () => {
+          btn.classList.remove('animate__animated', 'animate__pulse');
+        }, { once: true });
+      });
+    });
 
-    // Kết nối cổng COM khi nhấn nút "Kết Nối Cổng COM"
+    // --- Phần Web Serial API và Chart.js ---
+    let port, reader, writer, pollingInterval;
+    let chartDataRSSI = [];
+    let chartDataBER = [];
+    let chartLabels = [];
+    let measureCount = 0;
+    
+    const ctx = document.getElementById('signalChart').getContext('2d');
+    
+    // Tạo gradient cho dataset RSSI
+    const gradientRSSI = ctx.createLinearGradient(0, 0, 0, 400);
+    gradientRSSI.addColorStop(0, 'rgba(52,152,219,0.5)');
+    gradientRSSI.addColorStop(1, 'rgba(52,152,219,0)');
+    
+    // Tạo gradient cho dataset BER
+    const gradientBER = ctx.createLinearGradient(0, 0, 0, 400);
+    gradientBER.addColorStop(0, 'rgba(231,76,60,0.5)');
+    gradientBER.addColorStop(1, 'rgba(231,76,60,0)');
+    
+    const signalChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: chartLabels,
+        datasets: [
+          {
+            label: 'RSSI',
+            data: chartDataRSSI,
+            backgroundColor: gradientRSSI,
+            borderColor: 'rgba(52,152,219,1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            cubicInterpolationMode: 'monotone'
+          },
+          {
+            label: 'BER',
+            data: chartDataBER,
+            backgroundColor: gradientBER,
+            borderColor: 'rgba(231,76,60,1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            cubicInterpolationMode: 'monotone'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: 'Giá trị' },
+            suggestedMax: 31
+          },
+          x: {
+            title: { display: true, text: 'Thời gian (Ngày, Tháng, Năm, Giờ:Phút:Giây)' }
+          }
+        },
+        animation: {
+          duration: 800,
+          easing: 'easeInOutQuad'
+        }
+      }
+    });
+    
+    // Hàm cập nhật dữ liệu biểu đồ và bảng
+    function updateData(newRSSI, newBER) {
+      const maxPoints = 10;
+      measureCount++;
+      const now = new Date();
+      const timeStr = now.toLocaleString();
+      
+      // Cập nhật dữ liệu cho biểu đồ
+      chartDataRSSI.push(newRSSI);
+      chartDataBER.push(newBER);
+      chartLabels.push(timeStr);
+      if(chartDataRSSI.length > maxPoints) {
+        chartDataRSSI.shift();
+        chartDataBER.shift();
+        chartLabels.shift();
+      }
+      signalChart.update();
+      
+      // Cập nhật bảng dữ liệu với hiệu ứng động
+      const tbody = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
+      const row = document.createElement('tr');
+      row.classList.add('animate-row');
+      
+      const cellCount = document.createElement('td');
+      const cellTime = document.createElement('td');
+      const cellRSSI = document.createElement('td');
+      const cellBER = document.createElement('td');
+      
+      cellCount.textContent = measureCount;
+      cellTime.textContent = timeStr;
+      cellRSSI.textContent = newRSSI;
+      cellBER.textContent = newBER;
+      
+      row.appendChild(cellCount);
+      row.appendChild(cellTime);
+      row.appendChild(cellRSSI);
+      row.appendChild(cellBER);
+      tbody.appendChild(row);
+      
+      // Giới hạn số dòng hiển thị
+      if(tbody.rows.length > maxPoints) {
+        tbody.deleteRow(0);
+      }
+    }
+    
+    // Hàm gửi lệnh AT+CSQ tự động
+    async function sendATCSQ() {
+      if(writer) {
+        try {
+          const command = "AT+CSQ\r\n";
+          await writer.write(new TextEncoder().encode(command));
+          document.getElementById('output').textContent += 'Đã gửi: ' + command;
+        } catch (error) {
+          document.getElementById('output').textContent += 'Lỗi gửi AT+CSQ: ' + error + '\n';
+        }
+      }
+    }
+    
+    // Sự kiện kết nối cổng COM
     document.getElementById('connect').addEventListener('click', async () => {
       try {
-        // Yêu cầu người dùng chọn cổng COM
         port = await navigator.serial.requestPort();
-        // Mở cổng với tốc độ baud 115200 (điều chỉnh nếu cần)
         await port.open({ baudRate: 115200 });
         document.getElementById('output').textContent += 'Đã kết nối cổng COM.\n';
-        
-        // Thiết lập reader để nhận dữ liệu từ cổng
         reader = port.readable.getReader();
-        readLoop();
-
-        // Thiết lập writer để gửi dữ liệu
         writer = port.writable.getWriter();
+        // Gửi lệnh AT+CSQ tự động mỗi 1 giây
+        pollingInterval = setInterval(sendATCSQ, 1000);
+        readLoop();
       } catch (error) {
         document.getElementById('output').textContent += 'Lỗi kết nối: ' + error + '\n';
       }
     });
-
-    // Hàm liên tục đọc dữ liệu từ cổng COM
+    
+    // Hàm đọc dữ liệu từ cổng COM
     async function readLoop() {
       const textDecoder = new TextDecoder();
-      while (true) {
+      while(true) {
         try {
           const { value, done } = await reader.read();
-          if (done) {
-            // Đã hoàn thành đọc, giải phóng reader
+          if(done) {
             reader.releaseLock();
             break;
           }
-          if (value) {
+          if(value) {
             let receivedText = textDecoder.decode(value);
             document.getElementById('output').textContent += receivedText;
+            // Phân tích phản hồi AT+CSQ: định dạng "+CSQ: <rssi>,<ber>"
+            if(receivedText.includes('+CSQ:')) {
+              const match = receivedText.match(/\+CSQ:\s*(\d+),\s*(\d+)/);
+              if(match) {
+                const rssi = parseInt(match[1]);
+                const ber = parseInt(match[2]);
+                updateData(rssi, ber);
+              }
+            }
           }
-        } catch (error) {
+        } catch(error) {
           document.getElementById('output').textContent += 'Lỗi đọc dữ liệu: ' + error + '\n';
           break;
         }
       }
     }
-
-    // Gửi lệnh AT khi nhấn nút "Gửi Lệnh"
+    
+    // Gửi lệnh AT thủ công
     document.getElementById('send').addEventListener('click', async () => {
       let command = document.getElementById('command').value;
-      if (command.trim() === '') {
+      if(command.trim() === '') {
         document.getElementById('output').textContent += 'Vui lòng nhập lệnh AT.\n';
         return;
       }
       try {
-        // Thêm ký tự kết thúc lệnh nếu cần (ví dụ: "\r\n")
         command = command + '\r\n';
-        const data = new TextEncoder().encode(command);
-        await writer.write(data);
+        await writer.write(new TextEncoder().encode(command));
         document.getElementById('output').textContent += 'Đã gửi: ' + command;
       } catch (error) {
         document.getElementById('output').textContent += 'Lỗi gửi lệnh: ' + error + '\n';

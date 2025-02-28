@@ -8,24 +8,57 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Animate.css -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" 
+        integrity="sha512-HHsOCXq+Moc5aC8cJb3tHfEy96cPfuGL0GSlH6t4iO9+QF1+gmk+vz80Ej6QfwxVZTZk+Kd7QH6s5TRU6z1B8A==" 
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
   <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
-    /* Reset & cấu hình cơ bản */
-    * { margin:0; padding:0; box-sizing: border-box; }
+    /* Nền động với gradient */
     body {
-      background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+      background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+      background-size: 400% 400%;
+      animation: gradientBG 15s ease infinite;
       font-family: 'Roboto', sans-serif;
       padding: 20px;
-      color: #333;
-    }
-    h1, h2 {
-      text-align: center;
-      margin-bottom: 20px;
       color: #2c3e50;
+      position: relative;
+      overflow-x: hidden;
     }
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    /* Hoa đào rơi */
+    .petals {
+      pointer-events: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -2;
+      overflow: hidden;
+    }
+    .petal {
+      position: absolute;
+      top: -50px;
+      width: 30px;
+      height: 30px;
+      background-image: url('peach.png');
+      background-size: cover;
+      opacity: 0.8;
+      animation: fall linear infinite;
+    }
+    @keyframes fall {
+      0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+      100% { transform: translate(100px, 100vh) rotate(360deg); opacity: 0; }
+    }
+    h1, h2 { text-align: center; margin-bottom: 20px; color: #2c3e50; }
     .btn {
-      background-color: #3498db;
+      background: linear-gradient(135deg, #3498db, #2980b9);
       color: #fff;
       border: none;
       padding: 12px 24px;
@@ -34,7 +67,7 @@
       margin: 10px;
       transition: background-color 0.3s ease;
     }
-    .btn:hover { background-color: #2980b9; }
+    .btn:hover { background: linear-gradient(135deg, #2980b9, #1f6391); }
     input[type="text"], select {
       padding: 12px;
       width: 320px;
@@ -55,49 +88,84 @@
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
     .container { max-width: 1200px; margin: 0 auto; }
+    /* Container chứa biểu đồ và bảng theo hàng ngang */
+    .data-layout {
+      display: flex;
+      gap: 20px;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
     .chart-container, .table-container {
+      flex: 1;
       background: #fff;
       padding: 20px;
       border-radius: 10px;
-      margin: 30px auto;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
-    /* Bảng dữ liệu scrollable */
-    .table-container { max-height: 400px; overflow-y: auto; }
-    table {
+    /* Bảng dữ liệu với header cố định và cuộn tự động */
+    .table-container {
+      position: relative;
+      max-height: 400px;
+      overflow: hidden;
+    }
+    .table-header {
+      position: sticky;
+      top: 0;
+      background: #34495e;
+      z-index: 3;
+      border-bottom: 1px solid #ddd;
+    }
+    .table-header table, .table-body table {
       width: 100%;
+      table-layout: fixed;
       border-collapse: collapse;
     }
-    table, th, td { border: 1px solid #ddd; }
-    th, td { padding: 12px; text-align: center; }
-    th { background-color: #f7f7f7; }
+    .table-header th {
+      padding: 12px;
+      text-align: center;
+      border: 1px solid #ddd;
+      word-wrap: break-word;
+      width: 25%;
+      background-color: #34495e;
+      color: #ecf0f1;
+    }
+    .table-body {
+      max-height: 320px;
+      overflow-y: auto;
+    }
+    .table-body td {
+      padding: 12px;
+      text-align: center;
+      border: 1px solid #ddd;
+      word-wrap: break-word;
+      width: 25%;
+    }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
     }
     .animate-row { animation: fadeIn 0.5s ease-out; }
-    /* Style cho khu vực lựa chọn Baud Rate */
-    .baud-select {
-      display: inline-block;
-      margin: 10px;
-    }
-    .baud-select label {
-      margin-right: 8px;
-      font-weight: 500;
-    }
+    .baud-select { display: inline-block; margin: 10px; }
+    .baud-select label { margin-right: 8px; font-weight: 500; }
   </style>
 </head>
 <body>
+  <!-- Container cho hoa đào rơi -->
+  <div class="petals"></div>
+  
   <div class="container">
-    <h1 class="animate__animated animate__fadeInDown">SIM7100E Monitor & Lưu Trữ Dữ Liệu</h1>
+    <h1 class="animate__animated animate__fadeInDown">
+      <i class="fa-solid fa-mobile-screen-button"></i> SIM7100E Monitor & Lưu Trữ Dữ Liệu
+    </h1>
     
-    <!-- Giao diện Serial -->
+    <!-- Giao diện Serial và điều khiển cuộc gọi -->
     <div style="text-align: center;" class="animate__animated animate__fadeInUp">
-      <button class="btn" id="connect">Kết Nối Cổng COM</button>
+      <button class="btn" id="connect">
+        <i class="fa-solid fa-plug"></i> Kết Nối Cổng COM
+      </button>
       <br>
-      <!-- Dropdown chọn Baud Rate -->
       <div class="baud-select">
-        <label for="baudRateSelect">Chọn Baud Rate:</label>
+        <label for="baudRateSelect"><i class="fa-solid fa-gear"></i> Chọn Baud Rate:</label>
         <select id="baudRateSelect">
           <option value="9600">9600</option>
           <option value="19200">19200</option>
@@ -108,38 +176,159 @@
       </div>
       <br>
       <input type="text" id="command" placeholder="Nhập lệnh AT (thủ công)">
-      <button class="btn" id="send">Gửi Lệnh</button>
-      <!-- Nút chuyển chế độ đo 5 giây -->
-      <button class="btn" id="toggleMeasure5s">Bắt đầu đo 5s</button>
+      <button class="btn" id="send">
+        <i class="fa-solid fa-paper-plane"></i> Gửi Lệnh
+      </button>
+      <button class="btn" id="toggleMeasure5s">
+        <i class="fa-solid fa-stopwatch"></i> Bắt đầu đo 5s
+      </button>
+      <br>
+      <!-- Phần giao diện cuộc gọi -->
+      <input type="text" id="phoneNumber" placeholder="Nhập số điện thoại cần gọi">
+      <button class="btn" id="callButton">
+        <i class="fa-solid fa-phone"></i> Gọi
+      </button>
+      <button class="btn" id="hangupButton">
+        <i class="fa-solid fa-phone-slash"></i> Kết thúc cuộc gọi
+      </button>
     </div>
     <div id="output" class="animate__animated animate__fadeInUp"></div>
     
-    <!-- Phần biểu đồ -->
-    <div class="chart-container animate__animated animate__fadeInUp">
-      <h2>Biểu Đồ Độ Mạnh Tín Hiệu (RSSI)</h2>
-      <canvas id="signalChart"></canvas>
+    <!-- Container chứa biểu đồ và bảng dữ liệu theo hàng ngang -->
+    <div class="data-layout">
+      <!-- Phần biểu đồ bên trái -->
+      <div class="chart-container animate__animated animate__fadeInUp">
+        <h2><i class="fa-solid fa-chart-line"></i> Biểu Đồ Độ Mạnh Tín Hiệu (RSSI)</h2>
+        <canvas id="signalChart"></canvas>
+      </div>
+      
+      <!-- Bảng dữ liệu bên phải với header cố định -->
+      <div class="table-container animate__animated animate__fadeInUp">
+        <div class="table-header">
+          <h2 style="margin: 10px 0; color: #ecf0f1;">
+            <i class="fa-solid fa-table-columns"></i> Bảng Dữ Liệu Lần Đo
+          </h2>
+          <table>
+            <thead>
+              <tr>
+                <th><i class="fa-solid fa-hashtag"></i> Lần đo</th>
+                <th><i class="fa-solid fa-clock"></i> Thời gian</th>
+                <th><i class="fa-solid fa-signal"></i> Độ mạnh tín hiệu (RSSI)</th>
+                <th><i class="fa-solid fa-star"></i> Đánh giá</th>
+              </tr>
+            </thead>
+          </table>
+        </div>
+        <div class="table-body">
+          <table id="dataTable">
+            <tbody>
+              <!-- Dữ liệu được cập nhật tự động -->
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
     
-    <!-- Bảng dữ liệu -->
-    <div class="table-container animate__animated animate__fadeInUp">
-      <h2>Bảng Dữ Liệu Lần Đo</h2>
-      <table id="dataTable">
-        <thead>
-          <tr>
-            <th>Lần đo</th>
-            <th>Thời gian</th>
-            <th>Độ mạnh tín hiệu (RSSI)</th>
-            <th>Đánh giá</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- Dữ liệu được cập nhật tự động -->
-        </tbody>
-      </table>
+    <!-- Biểu đồ Thời Gian Gọi -->
+    <div class="chart-container animate__animated animate__fadeInUp" style="margin-top: 20px;">
+      <h2><i class="fa-solid fa-phone"></i> Biểu Đồ Thời Gian Gọi (giây)</h2>
+      <canvas id="callDurationChart"></canvas>
     </div>
+    
   </div>
   
+  <!-- IndexedDB Functions for persistent storage -->
   <script>
+    // Mở IndexedDB
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open("simDataDB", 1);
+        request.onupgradeneeded = function(event) {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains("dataStore")) {
+            db.createObjectStore("dataStore", { keyPath: "id" });
+          }
+        };
+        request.onsuccess = function(event) {
+          resolve(event.target.result);
+        };
+        request.onerror = function(event) {
+          reject(event.target.error);
+        };
+      });
+    }
+    
+    // Lưu dữ liệu vào IndexedDB
+    function saveDataToDB() {
+      openDB().then(db => {
+        const tx = db.transaction("dataStore", "readwrite");
+        const store = tx.objectStore("dataStore");
+        const dataToSave = { id: "data", measureCount, chartLabels, chartDataRSSI };
+        store.put(dataToSave);
+        return tx.complete;
+      }).catch(err => console.error("Error saving data to IndexedDB", err));
+    }
+    
+    // Tải dữ liệu từ IndexedDB
+    function loadDataFromDB() {
+      openDB().then(db => {
+        const tx = db.transaction("dataStore", "readonly");
+        const store = tx.objectStore("dataStore");
+        const request = store.get("data");
+        request.onsuccess = function(event) {
+          const result = event.target.result;
+          if(result) {
+            measureCount = result.measureCount || 0;
+            chartLabels = result.chartLabels || [];
+            chartDataRSSI = result.chartDataRSSI || [];
+            signalChart.data.labels = chartLabels;
+            signalChart.data.datasets[0].data = chartDataRSSI;
+            signalChart.update();
+            const tbody = document.querySelector('.table-body tbody');
+            tbody.innerHTML = "";
+            for (let i = 0; i < chartLabels.length; i++) {
+              const row = document.createElement('tr');
+              row.classList.add('animate-row');
+              const cellCount = document.createElement('td');
+              const cellTime = document.createElement('td');
+              const cellRSSI = document.createElement('td');
+              const cellQuality = document.createElement('td');
+              cellCount.textContent = i + 1;
+              cellTime.textContent = chartLabels[i];
+              cellRSSI.textContent = chartDataRSSI[i];
+              cellQuality.textContent = evaluateSignal(chartDataRSSI[i]);
+              row.appendChild(cellCount);
+              row.appendChild(cellTime);
+              row.appendChild(cellRSSI);
+              row.appendChild(cellQuality);
+              tbody.appendChild(row);
+            }
+            document.querySelector('.table-body').scrollTop = document.querySelector('.table-body').scrollHeight;
+          }
+        };
+      }).catch(err => console.error("Error loading data from IndexedDB", err));
+    }
+    
+    // Thay thế các hàm saveData() và loadData() với IndexedDB
+    function saveData() { saveDataToDB(); }
+    function loadData() { loadDataFromDB(); }
+  </script>
+  
+  <script>
+    // Tạo hiệu ứng hoa đào rơi
+    function createPetals(num) {
+      const petalsContainer = document.querySelector('.petals');
+      for (let i = 0; i < num; i++) {
+        const petal = document.createElement('div');
+        petal.classList.add('petal');
+        petal.style.left = Math.random() * 100 + '%';
+        petal.style.animationDelay = Math.random() * 5 + 's';
+        petal.style.animationDuration = 5 + Math.random() * 5 + 's';
+        petalsContainer.appendChild(petal);
+      }
+    }
+    createPetals(30);
+    
     // Hàm đánh giá chất lượng tín hiệu dựa trên giá trị RSSI
     function evaluateSignal(rssi) {
       if (rssi === 99) return "Không xác định";
@@ -151,10 +340,7 @@
       return "N/A";
     }
     
-    // Biến cờ để phân biệt lệnh thủ công
     let isManualCommand = false;
-    
-    // Hiệu ứng "pulse" cho các nút khi nhấn
     document.querySelectorAll('.btn').forEach(btn => {
       btn.addEventListener('click', () => {
         btn.classList.add('animate__animated', 'animate__pulse');
@@ -165,40 +351,34 @@
     });
     
     let port, reader, writer;
-    // Biến quản lý chế độ đo 5 giây
     let isMeasuring5s = false;
     let measurementInterval5s = null;
     
-    // Các biến lưu trữ dữ liệu cho biểu đồ và bảng
     let chartLabels = [];
     let chartDataRSSI = [];
     let measureCount = 0;
-    const maxPoints = 20;  // Số điểm tối đa hiển thị
+    const maxPoints = 20;
     
     const ctx = document.getElementById('signalChart').getContext('2d');
-    // Tạo gradient cho dataset RSSI
     const gradientRSSI = ctx.createLinearGradient(0, 0, 0, 400);
     gradientRSSI.addColorStop(0, 'rgba(52,152,219,0.5)');
     gradientRSSI.addColorStop(1, 'rgba(52,152,219,0)');
     
-    // Khởi tạo biểu đồ với Chart.js chỉ hiển thị RSSI
     const signalChart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: chartLabels,
-        datasets: [
-          {
-            label: 'Độ mạnh tín hiệu',
-            data: chartDataRSSI,
-            backgroundColor: gradientRSSI,
-            borderColor: 'rgba(52,152,219,1)',
-            borderWidth: 2,
-            fill: true,
-            tension: 0.4,
-            cubicInterpolationMode: 'monotone',
-            spanGaps: true
-          }
-        ]
+        datasets: [{
+          label: 'Độ mạnh tín hiệu',
+          data: chartDataRSSI,
+          backgroundColor: gradientRSSI,
+          borderColor: 'rgba(52,152,219,1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4,
+          cubicInterpolationMode: 'monotone',
+          spanGaps: true
+        }]
       },
       options: {
         responsive: true,
@@ -213,14 +393,44 @@
             ticks: { autoSkip: true, maxTicksLimit: 10 }
           }
         },
-        animation: {
-          duration: 800,
-          easing: 'easeInOutQuad'
+        animation: { duration: 800, easing: 'easeInOutQuad' }
+      }
+    });
+    
+    // Khởi tạo biểu đồ thời gian gọi
+    let callDurationLabels = [];
+    let callDurationData = [];
+    const callCtx = document.getElementById('callDurationChart').getContext('2d');
+    
+    const callDurationChart = new Chart(callCtx, {
+      type: 'line',
+      data: {
+        labels: callDurationLabels,
+        datasets: [{
+          label: 'Thời Gian Gọi (giây)',
+          data: callDurationData,
+          backgroundColor: 'rgba(231, 76, 60, 0.5)',
+          borderColor: 'rgba(231, 76, 60, 1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: 'Thời Gian (giây)' }
+          },
+          x: {
+            title: { display: true, text: 'Thời gian (dd/mm HH:MM:SS)' },
+            ticks: { autoSkip: true, maxTicksLimit: 10 }
+          }
         }
       }
     });
     
-    // Hàm định dạng nhãn thời gian: dd/mm HH:MM:SS (không chứa năm)
     function getCurrentTimeLabel() {
       const now = new Date();
       const day = String(now.getDate()).padStart(2, '0');
@@ -229,52 +439,6 @@
       return `${day}/${month} ${time}`;
     }
     
-    // Hàm lưu trữ dữ liệu vào localStorage
-    function saveData() {
-      const dataToSave = {
-        measureCount: measureCount,
-        chartLabels: chartLabels,
-        chartDataRSSI: chartDataRSSI
-      };
-      localStorage.setItem('simData', JSON.stringify(dataToSave));
-    }
-    
-    // Hàm tải dữ liệu từ localStorage khi trang được load
-    function loadData() {
-      const storedData = localStorage.getItem('simData');
-      if (storedData) {
-        const parsed = JSON.parse(storedData);
-        measureCount = parsed.measureCount || 0;
-        chartLabels = parsed.chartLabels || [];
-        chartDataRSSI = parsed.chartDataRSSI || [];
-        // Cập nhật biểu đồ
-        signalChart.data.labels = chartLabels;
-        signalChart.data.datasets[0].data = chartDataRSSI;
-        signalChart.update();
-        // Cập nhật bảng dữ liệu
-        const tbody = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
-        tbody.innerHTML = "";
-        for (let i = 0; i < chartLabels.length; i++) {
-          const row = document.createElement('tr');
-          row.classList.add('animate-row');
-          const cellCount = document.createElement('td');
-          const cellTime = document.createElement('td');
-          const cellRSSI = document.createElement('td');
-          const cellQuality = document.createElement('td');
-          cellCount.textContent = i + 1;
-          cellTime.textContent = chartLabels[i];
-          cellRSSI.textContent = chartDataRSSI[i];
-          cellQuality.textContent = evaluateSignal(chartDataRSSI[i]);
-          row.appendChild(cellCount);
-          row.appendChild(cellTime);
-          row.appendChild(cellRSSI);
-          row.appendChild(cellQuality);
-          tbody.appendChild(row);
-        }
-      }
-    }
-    
-    // Hàm cập nhật biểu đồ và bảng dữ liệu với giá trị RSSI mới
     function updateChart(newRSSI) {
       measureCount++;
       const timeLabel = getCurrentTimeLabel();
@@ -282,14 +446,13 @@
       
       chartLabels.push(timeLabel);
       chartDataRSSI.push(newRSSI);
-      if(chartLabels.length > maxPoints) {
+      if (chartLabels.length > maxPoints) {
         chartLabels.shift();
         chartDataRSSI.shift();
       }
       signalChart.update();
       
-      // Cập nhật bảng dữ liệu với hiệu ứng fade-in
-      const tbody = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
+      const tbody = document.querySelector('.table-body tbody');
       const row = document.createElement('tr');
       row.classList.add('animate-row');
       
@@ -309,17 +472,29 @@
       row.appendChild(cellQuality);
       tbody.appendChild(row);
       
-      // Lưu dữ liệu vào localStorage mỗi khi có cập nhật
-      saveData();
+      // Cuộn tự động xuống dưới cùng
+      document.querySelector('.table-body').scrollTop = document.querySelector('.table-body').scrollHeight;
+      
+      saveDataToDB();
     }
     
-    // Hàm gửi lệnh AT+CSQ qua serial
+    // Hàm cập nhật biểu đồ thời gian gọi
+    function updateCallDuration(duration) {
+      const timeLabel = getCurrentTimeLabel();
+      callDurationLabels.push(timeLabel);
+      callDurationData.push(duration);
+      if (callDurationLabels.length > maxPoints) {
+        callDurationLabels.shift();
+        callDurationData.shift();
+      }
+      callDurationChart.update();
+    }
+    
     async function sendATCSQ() {
-      if(writer) {
+      if (writer) {
         try {
           const command = "AT+CSQ\r\n";
           await writer.write(new TextEncoder().encode(command));
-          // Nếu không ở chế độ đo 5s và không gửi lệnh thủ công thì hiển thị thông báo
           if (!isMeasuring5s && !isManualCommand) {
             document.getElementById('output').textContent += 'Đã gửi: ' + command;
           }
@@ -329,35 +504,28 @@
       }
     }
     
-    // Sự kiện kết nối cổng COM
     document.getElementById('connect').addEventListener('click', async () => {
       try {
         port = await navigator.serial.requestPort();
-        // Lấy giá trị baud rate từ dropdown
         const baudRate = parseInt(document.getElementById('baudRateSelect').value);
         await port.open({ baudRate: baudRate });
-        document.getElementById('output').textContent += 'Đã kết nối cổng COM với baud rate ' + baudRate + '.\n';
+        document.getElementById('output').textContent += 'Kết nối thành công với baud rate ' + baudRate + '.\n';
         reader = port.readable.getReader();
         writer = port.writable.getWriter();
-        // Sau khi kết nối, tải dữ liệu từ localStorage (nếu có)
-        loadData();
-        // Bắt đầu đọc dữ liệu từ cổng COM
+        loadDataFromDB();
         readLoop();
       } catch (error) {
-        document.getElementById('output').textContent += 'Lỗi kết nối: ' + error + '\n';
+        document.getElementById('output').textContent += 'Kết nối không thành công, vui lòng chọn lại.\n';
       }
     });
     
-    // Sự kiện cho nút "Bắt đầu đo 5s" / "Tắt đo 5s"
     document.getElementById('toggleMeasure5s').addEventListener('click', () => {
       const btn = document.getElementById('toggleMeasure5s');
       if (!isMeasuring5s) {
-        // Nếu chưa đo, bắt đầu gửi lệnh AT+CSQ mỗi 5 giây
-        measurementInterval5s = setInterval(sendATCSQ, 5000);
+        measurementInterval5s = setInterval(sendATCSQ, 2000);
         btn.textContent = "Tắt đo 5s";
         isMeasuring5s = true;
       } else {
-        // Nếu đang đo, dừng quá trình đo
         clearInterval(measurementInterval5s);
         measurementInterval5s = null;
         btn.textContent = "Bắt đầu đo 5s";
@@ -365,10 +533,9 @@
       }
     });
     
-    // Sự kiện gửi lệnh AT thủ công
     document.getElementById('send').addEventListener('click', async () => {
       let command = document.getElementById('command').value;
-      if(command.trim() === '') {
+      if (command.trim() === '') {
         document.getElementById('output').textContent += 'Vui lòng nhập lệnh AT.\n';
         return;
       }
@@ -382,35 +549,79 @@
       }
     });
     
-    // Hàm đọc dữ liệu từ cổng COM liên tục
+    // Xử lý sự kiện gọi và kết thúc cuộc gọi
+    let callStartTime = 0;
+    document.getElementById('callButton').addEventListener('click', async () => {
+      let phone = document.getElementById('phoneNumber').value.trim();
+      if (phone === '') {
+        document.getElementById('output').textContent += 'Vui lòng nhập số điện thoại cần gọi.\n';
+        return;
+      }
+      try {
+        // Ghi nhận thời gian bắt đầu cuộc gọi
+        callStartTime = Date.now();
+        // Gửi lệnh AT để gọi: ATD<number>;
+        const command = "ATD" + phone + ";\r\n";
+        await writer.write(new TextEncoder().encode(command));
+        document.getElementById('output').textContent += 'Đã gửi lệnh gọi: ' + command;
+      } catch (error) {
+        document.getElementById('output').textContent += 'Lỗi gửi lệnh gọi: ' + error + '\n';
+      }
+    });
+    
+    document.getElementById('hangupButton').addEventListener('click', async () => {
+      if (callStartTime === 0) {
+        document.getElementById('output').textContent += 'Chưa có cuộc gọi nào được bắt đầu.\n';
+        return;
+      }
+      try {
+        // Gửi lệnh AT để kết thúc cuộc gọi (ví dụ: ATH)
+        const command = "ATH\r\n";
+        await writer.write(new TextEncoder().encode(command));
+        // Tính thời gian gọi (giây)
+        const callDuration = Math.round((Date.now() - callStartTime) / 1000);
+        updateCallDuration(callDuration);
+        document.getElementById('output').textContent += 'Kết thúc cuộc gọi. Thời gian gọi: ' + callDuration + ' giây.\n';
+        // Reset lại thời gian bắt đầu
+        callStartTime = 0;
+      } catch (error) {
+        document.getElementById('output').textContent += 'Lỗi khi kết thúc cuộc gọi: ' + error + '\n';
+      }
+    });
+    
     async function readLoop() {
       const textDecoder = new TextDecoder();
-      while(true) {
+      while (true) {
         try {
           const { value, done } = await reader.read();
-          if(done) {
-            reader.releaseLock();
-            break;
-          }
-          if(value) {
+          if (done) { reader.releaseLock(); break; }
+          if (value) {
             let receivedText = textDecoder.decode(value);
-            // Nếu đang gửi lệnh thủ công thì hiển thị phản hồi
             if (isManualCommand) {
               document.getElementById('output').textContent += receivedText;
-              if (receivedText.includes("OK") || receivedText.includes("ERROR")) {
+              if (receivedText.includes("OK")) {
+                document.getElementById('output').textContent += " (Chú thích: Lệnh AT được thực hiện thành công.)\n";
+                isManualCommand = false;
+              } else if (receivedText.includes("ERROR")) {
+                document.getElementById('output').textContent += " (Chú thích: Lệnh AT không thực hiện được.)\n";
                 isManualCommand = false;
               }
-            }
-            // Nếu không ở chế độ đo 5s thì hiển thị phản hồi
-            else if (!isMeasuring5s) {
+            } else if (!isMeasuring5s) {
               document.getElementById('output').textContent += receivedText;
             }
-            // Phân tích phản hồi AT+CSQ theo định dạng: "+CSQ: <rssi>,<...>"
-            if(receivedText.includes('+CSQ:')) {
+            if (receivedText.includes('+CSQ:')) {
               const match = receivedText.match(/\+CSQ:\s*(\d+)/);
-              if(match) {
+              if (match) {
                 const rssi = parseInt(match[1]);
                 updateChart(rssi);
+              }
+            }
+            // Nếu nhận được dữ liệu về thời gian gọi từ module (nếu có)
+            if (receivedText.includes('CALL_DURATION:')) {
+              const matchCall = receivedText.match(/CALL_DURATION:\s*(\d+)/);
+              if (matchCall) {
+                const duration = parseInt(matchCall[1]);
+                updateCallDuration(duration);
               }
             }
           }
@@ -420,6 +631,77 @@
         }
       }
     }
+    
+    // IndexedDB Functions (đã được định nghĩa ở trên)
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open("simDataDB", 1);
+        request.onupgradeneeded = function(event) {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains("dataStore")) {
+            db.createObjectStore("dataStore", { keyPath: "id" });
+          }
+        };
+        request.onsuccess = function(event) {
+          resolve(event.target.result);
+        };
+        request.onerror = function(event) {
+          reject(event.target.error);
+        };
+      });
+    }
+    
+    function saveDataToDB() {
+      openDB().then(db => {
+        const tx = db.transaction("dataStore", "readwrite");
+        const store = tx.objectStore("dataStore");
+        const dataToSave = { id: "data", measureCount, chartLabels, chartDataRSSI };
+        store.put(dataToSave);
+        return tx.complete;
+      }).catch(err => console.error("Error saving data to IndexedDB", err));
+    }
+    
+    function loadDataFromDB() {
+      openDB().then(db => {
+        const tx = db.transaction("dataStore", "readonly");
+        const store = tx.objectStore("dataStore");
+        const request = store.get("data");
+        request.onsuccess = function(event) {
+          const result = event.target.result;
+          if(result) {
+            measureCount = result.measureCount || 0;
+            chartLabels = result.chartLabels || [];
+            chartDataRSSI = result.chartDataRSSI || [];
+            signalChart.data.labels = chartLabels;
+            signalChart.data.datasets[0].data = chartDataRSSI;
+            signalChart.update();
+            const tbody = document.querySelector('.table-body tbody');
+            tbody.innerHTML = "";
+            for (let i = 0; i < chartLabels.length; i++) {
+              const row = document.createElement('tr');
+              row.classList.add('animate-row');
+              const cellCount = document.createElement('td');
+              const cellTime = document.createElement('td');
+              const cellRSSI = document.createElement('td');
+              const cellQuality = document.createElement('td');
+              cellCount.textContent = i + 1;
+              cellTime.textContent = chartLabels[i];
+              cellRSSI.textContent = chartDataRSSI[i];
+              cellQuality.textContent = evaluateSignal(chartDataRSSI[i]);
+              row.appendChild(cellCount);
+              row.appendChild(cellTime);
+              row.appendChild(cellRSSI);
+              row.appendChild(cellQuality);
+              tbody.appendChild(row);
+            }
+            document.querySelector('.table-body').scrollTop = document.querySelector('.table-body').scrollHeight;
+          }
+        };
+      }).catch(err => console.error("Error loading data from IndexedDB", err));
+    }
+    
+    function saveData() { saveDataToDB(); }
+    function loadData() { loadDataFromDB(); }
   </script>
 </body>
 </html>

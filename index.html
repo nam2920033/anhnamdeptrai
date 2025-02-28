@@ -161,7 +161,7 @@
     <!-- Giao diện Serial và điều khiển cuộc gọi -->
     <div style="text-align: center;" class="animate__animated animate__fadeInUp">
       <button class="btn" id="connect">
-        <i class="fa-solid fa-plug"></i> Kết Nối Cổng COM
+        <i class="fa-solid fa-plug"></i> Vui lòng chọn cổng COM
       </button>
       <br>
       <div class="baud-select">
@@ -180,7 +180,7 @@
         <i class="fa-solid fa-paper-plane"></i> Gửi Lệnh
       </button>
       <button class="btn" id="toggleMeasure5s">
-        <i class="fa-solid fa-stopwatch"></i> Bắt đầu đo 5s
+        <i class="fa-solid fa-stopwatch"></i> Bắt đầu đo tín hiệu
       </button>
       <br>
       <!-- Phần giao diện cuộc gọi -->
@@ -523,7 +523,7 @@
       const btn = document.getElementById('toggleMeasure5s');
       if (!isMeasuring5s) {
         measurementInterval5s = setInterval(sendATCSQ, 2000);
-        btn.textContent = "Tắt đo 5s";
+        btn.textContent = "Tắt đo tín hiệu";
         isMeasuring5s = true;
       } else {
         clearInterval(measurementInterval5s);
